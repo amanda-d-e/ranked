@@ -11,7 +11,17 @@ public class JDatabaseConnection {
 
     }
 
-    public static boolean moveRank(String title, int destinationRank){
+    /// Changes the rank of an item and updates the ranks of all other items accordingly.
+    ///
+    /// @param title            The title of the item to be moved.
+    /// @param destinationRank  The desired rank to move the item to.
+    /// @param updateDownwards  For recursive calls: the current direction in which update is moving.
+    ///                         Always set to false on first call of method.
+    /// @return true if the rank adjustment was successful, false otherwise
+    public static boolean moveRank(String title, int destinationRank, boolean updateDownwards){
+        if (title.isEmpty()) {
+            return true;
+        }
         Connection connection = null;
         String updateString = "UPDATE Items SET `rank`=? WHERE title=?";
         String selectTitleString = "SELECT title FROM Items WHERE `rank`=?";
@@ -66,16 +76,11 @@ public class JDatabaseConnection {
             connection.close();
 
             if (updateSuccessful1 > 0 && updateSuccessful2 > 0 && oldRank != -1) {
-                if (oldRank > destinationRank) {
-                    System.out.println("oldRank: " + oldRank + ", destinationRank: " + destinationRank);
-                    System.out.println("Calling moveRank(" + oldTitle + ", " + (destinationRank + 1) + ")");
-                    return moveRank(oldTitle, destinationRank + 1);
-                } else if (oldRank < destinationRank) {
-                    System.out.println("oldRank: " + oldRank + ", destinationRank: " + destinationRank);
-                    System.out.println("Calling moveRank(" + oldTitle + ", " + (destinationRank - 1) + ")");
-                    return moveRank(oldTitle, destinationRank - 1);
+                if (oldRank > destinationRank || updateDownwards) {
+                    return moveRank(oldTitle, destinationRank + 1, true);
+                } else {
+                    return moveRank(oldTitle, destinationRank - 1, false);
                 }
-                System.out.println("Broke out of if statement");
 
             } else {
                 return true;
@@ -87,39 +92,15 @@ public class JDatabaseConnection {
         return false;
     }
 
-
-    public static void main(String[] args) {
-        boolean moveRankSuccessful = moveRank("Mob Psycho 100", 2);
-
-        if (moveRankSuccessful) {
-            System.out.println("The rank was changed successfully");
-        } else {
-            System.out.println("There was a problem changing the rank");
-        }
-        // Before
-//        1. Hunter X Hunter
-//        2. Nichijou
-//        3. Mob Psycho 100
-
-        // Expected
-//        1. Hunter X Hunter
-//        2. Mob Psycho 100
-//        3. Nichijou
-
-
+    public static void printRankings() {
         Connection connection = null;
 
         try {
             connection = DriverManager.getConnection(url, user, password);
 
             Statement select = connection.createStatement();
-            Statement insert = connection.createStatement();
-            Statement update = connection.createStatement();
 
-            //update.execute("UPDATE Items SET `rank`=1 WHERE title='Nichijou'");
-            //insert.execute("INSERT INTO Items VALUES ('Mob Psycho 100', 3)");
             ResultSet selectResult = select.executeQuery("SELECT * FROM Items ORDER BY `rank`");
-
 
             while(selectResult.next()) {
                 int ranking = selectResult.getInt("rank");
@@ -128,8 +109,41 @@ public class JDatabaseConnection {
             }
 
             selectResult.close();
-            insert.close();
             select.close();
+            connection.close();
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+    public static void main(String[] args) {
+        printRankings();
+
+        boolean moveRankSuccessful = moveRank("Frieren", 3, false);
+
+        if (moveRankSuccessful) {
+            System.out.println("The rank was changed successfully");
+        } else {
+            System.out.println("There was a problem changing the rank");
+        }
+
+        printRankings();
+
+        Connection connection = null;
+
+        try {
+            connection = DriverManager.getConnection(url, user, password);
+
+            Statement insert = connection.createStatement();
+            Statement update = connection.createStatement();
+
+            //update.execute("UPDATE Items SET `rank`=1 WHERE title='Hunter X Hunter'");
+            //insert.execute("INSERT INTO Items VALUES ('Frieren', 4)");
+
+            insert.close();
             update.close();
             connection.close();
         }catch(SQLException e){
