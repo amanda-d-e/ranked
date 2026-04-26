@@ -92,6 +92,92 @@ public class JDatabaseConnection {
         return false;
     }
 
+    public static int getLowestRank() {
+        int lowest = 0;
+        Connection connection = null;
+
+        try {
+            connection = DriverManager.getConnection(url, user, password);
+
+            Statement select = connection.createStatement();
+
+            ResultSet selectResult = select.executeQuery("SELECT COUNT(*) AS rowCount FROM Items");
+
+            if (selectResult.next()) {
+                lowest = selectResult.getInt("rowCount");
+            }
+
+            selectResult.close();
+            select.close();
+            connection.close();
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return lowest;
+    }
+
+    public static boolean insertNewItem(String title, int rank) {
+        Connection connection = null;
+        String insertString = "INSERT INTO Items VALUES (?, ?)";
+
+        try {
+            connection = DriverManager.getConnection(url, user, password);
+            PreparedStatement insert = connection.prepareStatement(insertString);
+
+            insert.setString(1, title);
+            insert.setInt(2, getLowestRank() + 1);
+            int insertionSuccessful = insert.executeUpdate();
+            if (getLowestRank() + 1 != rank) {
+                insert.close();
+                connection.close();
+                return moveRank(title, rank, false);
+            }
+
+            insert.close();
+            connection.close();
+
+            if (insertionSuccessful > 0) {
+                return true;
+            }
+        }catch(SQLIntegrityConstraintViolationException e){
+            System.out.println("Item: " + title + " already exists in the database");
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    public static boolean deleteItem(String title, int rank) {
+        Connection connection = null;
+        String deleteString = "DELETE FROM Items WHERE title=?";
+        // REMOVE rank AS A PARAMETER AND GET THE RANK GIVEN THE TITLE ONLY ***
+
+        try {
+            connection = DriverManager.getConnection(url, user, password);
+            PreparedStatement delete = connection.prepareStatement(deleteString);
+
+            delete.setString(1, title);
+            boolean moveSuccessful = true;
+            if (getLowestRank() + 1 != rank) {
+                moveSuccessful = moveRank(title, getLowestRank(), false);
+            }
+
+            int insertionSuccessful = delete.executeUpdate();
+
+            delete.close();
+            connection.close();
+
+            if (insertionSuccessful > 0 && moveSuccessful) {
+                return true;
+            }
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
     public static void printRankings() {
         Connection connection = null;
 
@@ -116,19 +202,27 @@ public class JDatabaseConnection {
         }
     }
 
-
+/// TODO:
+/// could extract a method that gets the rank of an item given its title,
+/// and another one for getting the name of an item given its rank
 
 
     public static void main(String[] args) {
+//        printRankings();
+//
+//        boolean moveRankSuccessful = moveRank("Jojo's Bizarre Adventure", 5, false);
+//
+//        if (moveRankSuccessful) {
+//            System.out.println("The rank was changed successfully");
+//        } else {
+//            System.out.println("There was a problem changing the rank");
+//        }
+
         printRankings();
 
-        boolean moveRankSuccessful = moveRank("Frieren", 3, false);
-
-        if (moveRankSuccessful) {
-            System.out.println("The rank was changed successfully");
-        } else {
-            System.out.println("There was a problem changing the rank");
-        }
+        insertNewItem("Solo Leveling", 1);
+        printRankings();
+        deleteItem("Solo Leveling", 1);
 
         printRankings();
 
