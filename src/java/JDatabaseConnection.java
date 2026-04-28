@@ -205,6 +205,7 @@ public class JDatabaseConnection {
 /// TODO:
 /// could extract a method that gets the rank of an item given its title,
 /// and another one for getting the name of an item given its rank
+/// install and setup react
 
 
     public static void main(String[] args) {
