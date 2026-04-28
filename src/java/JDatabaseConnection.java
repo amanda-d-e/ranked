@@ -203,9 +203,10 @@ public class JDatabaseConnection {
     }
 
 /// TODO:
-/// could extract a method that gets the rank of an item given its title,
+/// - could extract a method that gets the rank of an item given its title,
 /// and another one for getting the name of an item given its rank
-/// install and setup react
+/// - could make it so there are stationary numbers on the leftmost column for rankings,
+/// and then the only thing you move is the item titles. Rankings still get updated in the database.
 
 
     public static void main(String[] args) {
